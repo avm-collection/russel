@@ -22,7 +22,7 @@ func New(input, path string) *Compiler {
 	return &Compiler{p: parser.New(input, path)}
 }
 
-func (c *Compiler) CompileInto(path string) error {
+func (c *Compiler) CompileInto(path string, anasm bool) error {
 	program := c.p.Parse()
 	if errors.Happend() {
 		os.Exit(1)
@@ -41,7 +41,22 @@ func (c *Compiler) CompileInto(path string) error {
 	f.Write([]byte(c.out))
 	f.Close()
 
-	fmt.Println("[CMD] anasm " + path)
+	if !anasm {
+		if err := c.anasmToExec(path); err != nil {
+			return err
+		}
+
+		fmt.Printf("Remove '%v'\n", path)
+		if err := os.Remove(path); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *Compiler) anasmToExec(path string) error {
+	fmt.Printf("[CMD] anasm '%v'\n", path)
 	cmd := exec.Command("anasm", path)
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout

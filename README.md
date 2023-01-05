@@ -23,6 +23,7 @@ A very unfinished statically typed programming language compiled to the
 * [Milestones](#milestones)
 * [Editors](#editors)
 * [Documentation](#documentation)
+* [Dependencies](#dependencies)
 * [Bugs](#bugs)
 * [Make](#make)
 
@@ -38,8 +39,8 @@ See [the `./examples` folder](./examples) for example programs
 ## Milestones
 - [X] Lexer
 - [X] Parser
-- [ ] Variables
 - [ ] Functions
+- [ ] Variables
 - [ ] If statements
 - [ ] Loops
 - [ ] Modules
@@ -50,6 +51,9 @@ Syntax highlighting configs for text editors are in the [`./editors`](./editors)
 
 ## Documentation
 (not) Hosted [here](https://avm-collection.github.io/russel/documentation)
+
+## Dependencies
+- [ANASM](https://avm-collection.github.io/anasm)
 
 ## Bugs
 If you find any bugs, please create an issue and report them.

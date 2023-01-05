@@ -14,9 +14,10 @@ import (
 )
 
 var (
-	out  = flag.String("o",     "",    "Path of the output binary")
-	v    = flag.Bool("version", false, "Show the version")
-	maxE = flag.Int("maxE",     8,     "Max amount of compiler errors")
+	out   = flag.String("o",     "",    "Path of the output binary")
+	v     = flag.Bool("version", false, "Show the version")
+	maxE  = flag.Int("maxE",     8,     "Max amount of compiler errors")
+	anasm = flag.Bool("s",       false, "Output the AVM assembly file")
 
 	args []string
 )
@@ -119,7 +120,7 @@ func compile(path, out string) {
 
 	c := compiler.New(string(data), path)
 
-	err = c.CompileInto(out)
+	err = c.CompileInto(out, *anasm)
 	if err != nil {
 		printError(err.Error())
 
