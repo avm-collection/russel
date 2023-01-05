@@ -47,6 +47,7 @@ const (
 
 	Let
 	Func
+	Inline
 
 	If
 	Else
@@ -89,8 +90,9 @@ var tokTypeNames = map[Type]string{
 	Name: "keyword name",
 	Uses: "keyword uses",
 
-	Let:  "keyword let",
-	Func: "keyword fun",
+	Let:    "keyword let",
+	Func:   "keyword fun",
+	Inline: "keyword inline",
 
 	If:     "keyword if",
 	Else:   "keyword else",
@@ -100,7 +102,7 @@ var tokTypeNames = map[Type]string{
 }
 
 func AllTokensCoveredTest() {
-	if count != 27 {
+	if count != 28 {
 		panic("Cover all token types")
 	}
 }

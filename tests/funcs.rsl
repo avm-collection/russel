@@ -1,0 +1,8 @@
+fun (main) {
+	(test)
+	(writef "How are you?\n")
+}
+
+fun (test) {
+	(writef "Hello from (test)\n")
+}

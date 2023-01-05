@@ -1,4 +1,4 @@
-fun (main) -> int {
+fun (main) {
 	(writef "Hello there!\n")
 	(writef "How are you?\n")
 }

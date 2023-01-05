@@ -23,8 +23,7 @@ func New(input, path string) *Parser {
 func (p *Parser) Parse() *node.Statements {
 	topLevel := &node.Statements{Token: p.tok}
 
-	p.tok = p.l.NextToken()
-	if p.tok.Type == token.Error {
+	if p.tok = p.l.NextToken(); p.tok.Type == token.Error {
 		errors.Error(p.tok.Where, p.tok.Data)
 		os.Exit(1)
 	}
@@ -199,7 +198,12 @@ func (p *Parser) parseFuncCall() *node.FuncCall {
 func (p *Parser) parseFunc() *node.Func {
 	f := &node.Func{Token: p.tok}
 
-	p.next()
+	if p.next(); p.tok.Type == token.Inline {
+		f.Inline = true
+
+		p.next()
+	}
+
 	if p.tok.Type != token.LParen {
 		errors.Error(p.tok.Where, "Expected '(' to open function head definition, got %v", p.tok)
 		p.next()
@@ -222,8 +226,7 @@ func (p *Parser) parseFunc() *node.Func {
 		p.next()
 	}
 
-	p.next()
-	if p.tok.Type == token.Arrow {
+	if p.next(); p.tok.Type == token.Arrow {
 		p.next()
 
 		f.Type = p.parseId()
@@ -239,8 +242,7 @@ func (p *Parser) next() {
 		return
 	}
 
-	p.tok = p.l.NextToken()
-	if p.tok.Type == token.Error {
+	if p.tok = p.l.NextToken(); p.tok.Type == token.Error {
 		errors.Error(p.tok.Where, p.tok.Data)
 		os.Exit(1)
 	}

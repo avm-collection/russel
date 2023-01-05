@@ -5,7 +5,7 @@ const (
 	GithubLink = "https://github.com/avm-collection/russel"
 
 	VersionMajor = 0
-	VersionMinor = 5
+	VersionMinor = 6
 	VersionPatch = 0
 
 	AsciiLogo = ` ____                    _

@@ -84,9 +84,10 @@ func (r *Return) String()       string      {return r.Expr.String()}
 type Func struct {
 	Token token.Token
 
-	Name *Id
-	Type *Id
-	Body *Statements
+	Name  *Id
+	Type  *Id
+	Body  *Statements
+	Inline bool
 }
 
 func (f *Func) statementNode() {}

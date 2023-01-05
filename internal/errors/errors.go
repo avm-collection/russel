@@ -26,6 +26,10 @@ func template(where token.Where, msg, type_, attr string) {
 	fmt.Fprintf(os.Stderr, "    %v | %v%v\x1b[0m%v\n", line, part1, attr + main, part2)
 }
 
+func NoOutput() bool {
+	return first
+}
+
 func separator() {
 	if !first {
 		fmt.Println()

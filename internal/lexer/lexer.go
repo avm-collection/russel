@@ -18,8 +18,9 @@ var Keywords = map[string]token.Type{
 	"name": token.Name,
 	"uses": token.Uses,
 
-	"let": token.Let,
-	"fun": token.Func,
+	"let":    token.Let,
+	"fun":    token.Func,
+	"inline": token.Inline,
 
 	"if":     token.If,
 	"else":   token.Else,

@@ -1,0 +1,17 @@
+fun inline (test-inlined) {
+	(writef "Hello from (test-inlined)\n")
+}
+
+fun (test-not-inlined) {
+	(writef "Hello from (test-not-inlined)\n")
+}
+
+fun (main) {
+	(test-inlined)
+	(test-inlined)
+	(test-inlined)
+
+	(test-not-inlined)
+	(test-not-inlined)
+	(test-not-inlined)
+}
