@@ -235,7 +235,7 @@ func (c *Compiler) compile(program *node.Statements) (asm string) {
 	main, ok := c.funcs[MainFuncName]
 	if !ok {
 		errors.Simple("Missing entry function '%v'", MainFuncName)
-		errors.NoteSuggestNewCode(c.p.WhereFileEnd, "Suggesting to add", []string{
+		errors.NoteSuggestNewCode(c.p.WhereFileEnd, "Suggestion: add", []string{
 			"fun (main) -> int {",
 			"    # Put your entry code here",
 			"",
