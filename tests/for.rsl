@@ -1,0 +1,6 @@
+let i
+
+fun (main) {
+	for i = 0; (< i 10); ++ i
+		(iprint i)
+}

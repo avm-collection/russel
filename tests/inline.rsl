@@ -1,9 +1,9 @@
 fun inline (test-inlined) {
-	(writef "Hello from (test-inlined)\n", 1)
+	(writef "Hello from (test-inlined)\n" 1)
 }
 
 fun (test-not-inlined) {
-	(writef "Hello from (test-not-inlined)\n", 1)
+	(writef "Hello from (test-not-inlined)\n" 1)
 }
 
 fun (main) {

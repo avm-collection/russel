@@ -1,0 +1,11 @@
+mac stdout = 1
+let i = 0
+
+fun (main) {
+	while (< i 10) {
+		(writef "i = " stdout)
+		(iprint i)
+
+		i = (+ i 1)
+	}
+}

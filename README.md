@@ -17,7 +17,7 @@
 
 ### !WARNING!
 This is a VERY unfinished language, so expect bugs, many missing features, ugly internal code (im
-not responsible for eye damage after the sight) and more.
+not responsible for eye damage after the sight), changing syntax and more.
 
 A very unfinished statically typed programming language compiled to the
 [AVM virtual machine](https://github.com/avm-collection/avm) bytecode
@@ -45,10 +45,10 @@ See [the `./examples` folder](./examples) for example programs
 - [X] Parser
 - [X] Functions
 - [X] If statements
+- [X] Variables
+- [X] Loops
 - [ ] Compile directly to bytecode
 - [ ] Type checking
-- [ ] Variables
-- [ ] Loops
 - [ ] Structures
 - [ ] Modules
 - [ ] Self hosted

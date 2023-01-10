@@ -14,6 +14,8 @@ var Keywords = map[string]token.Type{
 
 	"->": token.Arrow,
 	"=":  token.Assign,
+	"++": token.Increment,
+	"--": token.Decrement,
 
 	"name": token.Name,
 	"uses": token.Uses,
@@ -26,6 +28,13 @@ var Keywords = map[string]token.Type{
 	"if":     token.If,
 	"unless": token.Unless,
 	"else":   token.Else,
+
+	"while":    token.While,
+	"until":    token.Until,
+	"for":      token.For,
+	"break":    token.Break,
+	"continue": token.Continue,
+
 	"return": token.Return,
 }
 
@@ -52,7 +61,7 @@ func New(input, path string) *Lexer {
 
 func isSeparatorCh(ch byte) bool {
 	switch ch {
-	case '(', ')', '{', '}', '[', ']', ',', '.', ':': return true
+	case '(', ')', '{', '}', '[', ']', ',', '.', ':', ';': return true
 
 	default: return isWhitespace(ch)
 	}
@@ -105,6 +114,8 @@ func (l *Lexer) NextToken() (tok token.Token) {
 			l.skipComment()
 
 			continue
+
+		case ';': tok = l.lexSimpleSym(token.Separator)
 
 		case '(': tok = l.lexSimpleSym(token.LParen)
 		case ')': tok = l.lexSimpleSym(token.RParen)

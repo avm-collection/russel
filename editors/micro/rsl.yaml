@@ -3,7 +3,7 @@ detect:
     filename: "\\.rsl$"
 
 rules:
-    - statement: "\\b(let|mac|return|fun|inline|if|unless|else)\\b"
+    - statement: "\\b(let|mac|return|fun|inline|if|unless|else|while|until|for|break|continue)\\b"
     - type:      "\\b(int|bool)\\b"
     - constant.string:
         start: "\""

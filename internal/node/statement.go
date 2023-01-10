@@ -54,7 +54,7 @@ type Let struct {
 
 	Name *Id
 	Type *Id
-	Expr Expr
+	Expr  Expr
 }
 
 func (l *Let) statementNode() {}
@@ -68,12 +68,46 @@ func (l *Let) String()       string      {
 	}
 }
 
+// Variable assignment
+type Assign struct {
+	Token token.Token
+
+	Name *Id
+	Expr  Expr
+}
+
+func (a *Assign) statementNode() {}
+func (a *Assign) TypeToString() string      {return "variable declaration"}
+func (a *Assign) NodeToken()    token.Token {return a.Token}
+func (a *Assign) String()       string      {
+	return fmt.Sprintf("%v = %v", a.Name.String(), a.Expr.String())
+}
+
+// Variable increment/decrement
+type Increment struct {
+	Token token.Token
+
+	Name     *Id
+	Decrement bool
+}
+
+func (i *Increment) statementNode() {}
+func (i *Increment) TypeToString() string      {return "variable increment"}
+func (i *Increment) NodeToken()    token.Token {return i.Token}
+func (i *Increment) String()       string      {
+	if i.Decrement {
+		return fmt.Sprintf("-- %v", i.Name.String())
+	} else {
+		return fmt.Sprintf("++ %v", i.Name.String())
+	}
+}
+
 // Macro declaration
 type Macro struct {
 	Token token.Token
 
 	Name *Id
-	Expr Expr
+	Expr  Expr
 }
 
 func (m *Macro) statementNode() {}
@@ -116,6 +150,63 @@ func (i *If) String()       string      {
 		return fmt.Sprintf("if %v %v", i.Cond.String(), i.Then.String())
 	}
 }
+
+// While
+type While struct {
+	Token token.Token
+
+	Cond  Expr
+	Body *Statements
+
+	Invert bool
+}
+
+func (w *While) statementNode() {}
+func (w *While) TypeToString() string      {return "while statement"}
+func (w *While) NodeToken()    token.Token {return w.Token}
+func (w *While) String()       string      {
+	return fmt.Sprintf("while %v %v", w.Cond.String(), w.Body.String())
+}
+
+// For
+type For struct {
+	Token token.Token
+
+	Init  Statement
+	Cond  Expr
+	Last  Statement
+	Body *Statements
+
+	Invert bool
+}
+
+func (f *For) statementNode() {}
+func (f *For) TypeToString() string      {return "for statement"}
+func (f *For) NodeToken()    token.Token {return f.Token}
+func (f *For) String()       string      {
+	return fmt.Sprintf("for %v; %v; %v %v",
+	                   f.Init.String(), f.Cond.String(), f.Last.String(), f.Body.String())
+}
+
+// Break
+type Break struct {
+	Token token.Token
+}
+
+func (b *Break) statementNode() {}
+func (b *Break) TypeToString() string      {return "break statement"}
+func (b *Break) NodeToken()    token.Token {return b.Token}
+func (b *Break) String()       string      {return "break"}
+
+// Continue
+type Continue struct {
+	Token token.Token
+}
+
+func (c *Continue) statementNode() {}
+func (c *Continue) TypeToString() string      {return "continue statement"}
+func (c *Continue) NodeToken()    token.Token {return c.Token}
+func (c *Continue) String()       string      {return "continue"}
 
 // Func declaration
 type Func struct {

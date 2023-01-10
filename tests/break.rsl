@@ -1,0 +1,22 @@
+mac stdout = 1
+
+let i = 0
+
+fun (main) {
+	while (< i 10) {
+		if (== i 2) {
+			++ i
+			continue
+		} else if (== i 7) {
+			break
+		}
+
+		(writef "hello" stdout)
+		(iprint i)
+
+		++ i
+		continue
+
+		(writef "i will not be printed\n" stdout)
+	}
+}

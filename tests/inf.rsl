@@ -1,0 +1,7 @@
+fun (main) {
+	(using_for)
+}
+
+fun (using_for)   for ;;;     (writef "Im infinite!\n" 1)
+fun (using_while) while true  (writef "Im infinite!\n" 1)
+fun (using_until) until false (writef "Im infinite!\n" 1)

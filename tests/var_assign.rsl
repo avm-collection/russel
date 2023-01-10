@@ -1,0 +1,24 @@
+mac stdout = 1
+
+let a = 5
+let b
+
+fun (main) {
+	(print_a)
+	(print_b)
+
+	(writef "setting b to a * 3\n" stdout)
+
+	b = (* a 3)
+	(print_b)
+}
+
+fun inline (print_a) {
+	(writef "a = " stdout)
+	(iprint a)
+}
+
+fun inline (print_b) {
+	(writef "b = " stdout)
+	(iprint b)
+}

@@ -13,3 +13,7 @@
 - `0.8.1`:  Add if statements
 - `0.9.1`:  Add macros
 - `0.10.1`: Add binary literals
+- `0.11.1`: Add variables
+- `0.12.1`: Add loops
+- `0.13.1`: Add increment, decrement, break, continue
+- `0.14.1`: Add for loops

@@ -65,7 +65,7 @@ func (p *Parser) parseStatements() *node.Statements {
 	// Statement list
 	for p.tok.Type != token.RCurly {
 		if p.tok.Type == token.EOF {
-			errors.Error(p.tok.Where, "Expected matching '}', got %v", p.tok)
+			errors.Error(p.tok.Where, "Expected matching '%v', got %v", token.RCurly, p.tok)
 			errors.Note(statements.NodeToken().Where, "Opened here")
 			return nil
 		}
@@ -81,12 +81,42 @@ func (p *Parser) parseStatements() *node.Statements {
 }
 
 func (p *Parser) parseStatement() node.Statement {
-	switch p.tok.Type {
-	case token.Let:    return p.parseLet()
-	case token.Macro:  return p.parseMacro()
-	case token.Return: return p.parseReturn()
-	case token.If:     return p.parseIf(false)
-	case token.Unless: return p.parseIf(true)
+	tok := p.tok
+	switch tok.Type {
+	case token.Let:      return p.parseLet()
+	case token.Macro:    return p.parseMacro()
+	case token.Return:   return p.parseReturn()
+	case token.If:       return p.parseIf(false)
+	case token.Unless:   return p.parseIf(true)
+	case token.While:    return p.parseWhile(false)
+	case token.Until:    return p.parseWhile(true)
+	case token.For:      return p.parseFor()
+
+	case token.Break:
+		p.next()
+		return &node.Break{Token: tok}
+
+	case token.Continue:
+		p.next()
+		return &node.Continue{Token: tok}
+
+	case token.Increment:
+		p.next()
+		return &node.Increment{Token: tok, Name: p.parseId()}
+
+	case token.Decrement:
+		p.next()
+		return &node.Increment{Token: tok, Name: p.parseId(), Decrement: true}
+
+	case token.Id:
+		id := p.parseId()
+		switch p.tok.Type {
+		case token.Assign:
+			p.next()
+			return &node.Assign{Token: p.tok, Name: id, Expr: p.parseExpr()}
+
+		default: return &node.ExprStatement{Expr: id}
+		}
 
 	default:
 		expr := p.parseExpr()
@@ -117,6 +147,51 @@ func (p *Parser) parseIf(invert bool) node.Statement {
  	}
 
 	return i
+}
+
+func (p *Parser) parseWhile(invert bool) node.Statement {
+	w := &node.While{Token: p.tok, Invert: invert}
+
+	p.next()
+	w.Cond = p.parseExpr()
+	w.Body = p.parseStatements()
+
+	return w
+}
+
+func (p *Parser) parseFor() node.Statement {
+	f := &node.For{Token: p.tok}
+
+	p.next()
+	if p.tok.Type != token.Separator {
+		f.Init = p.parseStatement()
+
+		if p.tok.Type != token.Separator {
+			errors.Error(p.tok.Where, "Expected '%v', got %v", token.Separator, p.tok)
+			return f
+		}
+	}
+
+	p.next()
+	if p.tok.Type != token.Separator {
+		f.Cond = p.parseExpr()
+
+		if p.tok.Type != token.Separator {
+			errors.Error(p.tok.Where, "Expected '%v', got %v", token.Separator, p.tok)
+			return f
+		}
+	}
+
+	p.next()
+	if p.tok.Type != token.Separator {
+		f.Last = p.parseStatement()
+	} else {
+		p.next()
+	}
+
+	f.Body = p.parseStatements()
+
+	return f
 }
 
 func (p *Parser) parseLet() *node.Let {
@@ -228,7 +303,7 @@ func (p *Parser) parseFuncCall() *node.FuncCall {
 
 	for p.tok.Type != token.RParen {
 		if p.tok.Type == token.EOF {
-			errors.Error(p.tok.Where, "Expected matching ')', got %v", p.tok)
+			errors.Error(p.tok.Where, "Expected matching '%v', got %v", token.RParen, p.tok)
 			errors.Note(start, "Opened here")
 			return nil
 		}
@@ -250,7 +325,8 @@ func (p *Parser) parseFunc() *node.Func {
 	}
 
 	if p.tok.Type != token.LParen {
-		errors.Error(p.tok.Where, "Expected '(' to open function head definition, got %v", p.tok)
+		errors.Error(p.tok.Where, "Expected '%v' to open function head definition, got %v",
+		             token.LParen, p.tok)
 		p.next()
 		return nil
 	}
@@ -261,7 +337,7 @@ func (p *Parser) parseFunc() *node.Func {
 	start := p.tok.Where
 	for p.tok.Type != token.RParen {
 		if p.tok.Type == token.EOF {
-			errors.Error(p.tok.Where, "Expected matching ')', got %v", p.tok)
+			errors.Error(p.tok.Where, "Expected matching '%v', got %v", token.RParen, p.tok)
 			errors.Note(start, "Opened here")
 			return nil
 		}

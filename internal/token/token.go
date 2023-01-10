@@ -13,7 +13,9 @@ func (w Where) String() string {
 
 type Type int
 const (
-	EOF = iota
+	EOF = Type(iota)
+
+	Separator
 
 	Id
 
@@ -38,6 +40,8 @@ const (
 	RBracket
 
 	Assign
+	Increment
+	Decrement
 
 	Arrow
 	Colon
@@ -54,6 +58,13 @@ const (
 	If
 	Unless
 	Else
+
+	While
+	Until
+	For
+	Break
+	Continue
+
 	Return
 
 	Error
@@ -62,6 +73,8 @@ const (
 
 var tokTypeNames = map[Type]string{
 	EOF: "end of file",
+
+	Separator: ";",
 
 	Id: "identifier",
 
@@ -84,7 +97,9 @@ var tokTypeNames = map[Type]string{
 	LBracket: "[",
 	RBracket: "]",
 
-	Assign: "=",
+	Assign:    "=",
+	Increment: "++",
+	Decrement: "--",
 
 	Dot:   ".",
 	Arrow: "->",
@@ -101,13 +116,20 @@ var tokTypeNames = map[Type]string{
 	If:     "keyword if",
 	Unless: "keyword unless",
 	Else:   "keyword else",
+
+	While:    "keyword while",
+	Until:    "keyword until",
+	For:      "keyword for",
+	Break:    "keyword break",
+	Continue: "keyword continue",
+
 	Return: "keyword return",
 
 	Error: "error",
 }
 
 func AllTokensCoveredTest() {
-	if count != 31 {
+	if count != 39 {
 		panic("Cover all token types")
 	}
 }
