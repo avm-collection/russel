@@ -44,7 +44,8 @@ See [the `./examples` folder](./examples) for example programs
 - [X] Lexer
 - [X] Parser
 - [X] Functions
-- [ ] If statements
+- [X] If statements
+- [ ] Compile directly to bytecode
 - [ ] Type checking
 - [ ] Variables
 - [ ] Loops

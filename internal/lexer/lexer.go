@@ -18,11 +18,13 @@ var Keywords = map[string]token.Type{
 	"name": token.Name,
 	"uses": token.Uses,
 
+	"mac":    token.Macro,
 	"let":    token.Let,
 	"fun":    token.Func,
 	"inline": token.Inline,
 
 	"if":     token.If,
+	"unless": token.Unless,
 	"else":   token.Else,
 	"return": token.Return,
 }
@@ -72,6 +74,10 @@ func isDecDigit(ch byte) bool {
 
 func isOctDigit(ch byte) bool {
 	return ch >= '0' && ch <= '7'
+}
+
+func isBinDigit(ch byte) bool {
+	return ch == '0' || ch == '1'
 }
 
 func isHexDigit(ch byte) bool {
@@ -124,6 +130,7 @@ func (l *Lexer) NextToken() (tok token.Token) {
 
 				continue
 			} else {
+				l.where.Len = 1
 				return token.NewError(l.where, "Unexpected character '%v'", string(l.ch))
 			}
 		}
@@ -171,6 +178,8 @@ func (l *Lexer) lexString() token.Token {
 				default: return token.NewError(l.where, "Unknown escape sequence '\\%v'",
 				                               string(l.ch))
 				}
+
+				escape = false
 			} else {
 				str += string(l.ch)
 			}
@@ -202,6 +211,11 @@ func (l *Lexer) lexNum() token.Token {
 		l.next()
 
 		return l.lexOct()
+	} else if l.ch == '0' && (l.peek() == 'b' || l.peek() == 'B') {
+		l.next()
+		l.next()
+
+		return l.lexBin()
 	} else {
 		return l.lexDec()
 	}
@@ -256,6 +270,23 @@ func (l *Lexer) lexOct() token.Token {
 	}
 
 	return token.Token{Type: token.Oct, Data: str}
+}
+
+func (l *Lexer) lexBin() token.Token {
+	str := ""
+
+	for !isSeparatorCh(l.ch) {
+		if !isBinDigit(l.ch) {
+			return token.NewError(l.where, "Unexpected character '%v' in binary number",
+			                      string(l.ch))
+		}
+
+		str += string(l.ch)
+
+		l.next()
+	}
+
+	return token.Token{Type: token.Bin, Data: str}
 }
 
 func (l *Lexer) lexId() token.Token {

@@ -1,0 +1,10 @@
+mac stdout = 1
+
+fun (test) {
+	(writef "My name will be misspelled!\n" stdout)
+}
+
+fun (main) {
+	(tset)
+	(writef "Testing\n" sdout)
+}

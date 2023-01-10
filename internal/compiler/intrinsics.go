@@ -1,5 +1,5 @@
 package compiler
-
+/*
 func (c *Compiler) addIntrinsics() {
 	c.funcs["writef"] = &Intrinsic{body: c.genIntrinsicWrf(), inline: true}
 
@@ -37,3 +37,4 @@ func (c *Compiler) genIntrinsicDiv() string {
 func (c *Compiler) genIntrinsicPrt() string {
 	return c.genInst("prt", "")
 }
+*/

@@ -1,4 +1,4 @@
 fun (main) {
-	(writef "Hello there!\n")
-	(writef "How are you?\n")
+	(writef "Hello there!\n" 1)
+	(writef "How are you?\n" 1)
 }

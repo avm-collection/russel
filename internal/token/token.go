@@ -20,6 +20,7 @@ const (
 	Dec
 	Hex
 	Oct
+	Bin
 	Char
 
 	True
@@ -45,11 +46,13 @@ const (
 	Name
 	Uses
 
+	Macro
 	Let
 	Func
 	Inline
 
 	If
+	Unless
 	Else
 	Return
 
@@ -90,11 +93,13 @@ var tokTypeNames = map[Type]string{
 	Name: "keyword name",
 	Uses: "keyword uses",
 
+	Macro:  "keyword mac",
 	Let:    "keyword let",
 	Func:   "keyword fun",
 	Inline: "keyword inline",
 
 	If:     "keyword if",
+	Unless: "keyword unless",
 	Else:   "keyword else",
 	Return: "keyword return",
 
@@ -102,7 +107,7 @@ var tokTypeNames = map[Type]string{
 }
 
 func AllTokensCoveredTest() {
-	if count != 28 {
+	if count != 30 {
 		panic("Cover all token types")
 	}
 }

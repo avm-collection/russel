@@ -3,7 +3,7 @@ detect:
     filename: "\\.rsl$"
 
 rules:
-    - statement: "\\b(let|return|fun|inline)\\b"
+    - statement: "\\b(let|mac|return|fun|inline|if|unless|else)\\b"
     - type:      "\\b(int|bool)\\b"
     - constant.string:
         start: "\""
@@ -26,7 +26,7 @@ rules:
     - constant.bool: "(\\b(true|false)\\b)"
 
     - symbol.operator: "[=\\+\\-\\*/%><\\(\\)]"
-    - symbol.operator: "\\b(writef|print-int)\\b"
+    - symbol.operator: "\\b(writef|iprint|fprint|exit|not|and|or)\\b"
 
     - comment:
         start: "#"

@@ -8,3 +8,7 @@
 - `0.4.0`: Compiling a basic hello world (and only that)
 - `0.5.0`: Option to generate only assembly, otherwise generate only executable
 - `0.6.0`: Functions, function inlining, arithmetic and output intrinsics
+- `0.6.1`: Fix escape sequences
+- `0.7.1`: Add if statements
+- `0.8.1`: Add macros
+- `0.9.1`: Add binary literals

@@ -1,8 +1,8 @@
 fun (main) {
 	(test)
-	(writef "How are you?\n")
+	(writef "How are you?\n" 1)
 }
 
 fun (test) {
-	(writef "Hello from (test)\n")
+	(writef "Hello from (test)\n" 1)
 }

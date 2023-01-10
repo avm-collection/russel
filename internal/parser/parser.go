@@ -11,6 +11,8 @@ import (
 )
 
 type Parser struct {
+	WhereFileEnd token.Where
+
 	tok token.Token
 
 	l *lexer.Lexer
@@ -32,8 +34,9 @@ func (p *Parser) Parse() *node.Statements {
 		var s node.Statement
 
 		switch p.tok.Type {
-		case token.Func: s = p.parseFunc()
-		case token.Let:  s = p.parseLet()
+		case token.Func:  s = p.parseFunc()
+		case token.Let:   s = p.parseLet()
+		case token.Macro: s = p.parseMacro()
 
 		default:
 			errors.Error(p.tok.Where, "Unexpected %v in top-level", p.tok)
@@ -80,7 +83,10 @@ func (p *Parser) parseStatements() *node.Statements {
 func (p *Parser) parseStatement() node.Statement {
 	switch p.tok.Type {
 	case token.Let:    return p.parseLet()
+	case token.Macro:  return p.parseMacro()
 	case token.Return: return p.parseReturn()
+	case token.If:     return p.parseIf(false)
+	case token.Unless: return p.parseIf(true)
 
 	default:
 		expr := p.parseExpr()
@@ -91,10 +97,26 @@ func (p *Parser) parseStatement() node.Statement {
 
 func (p *Parser) parseReturn() node.Statement {
 	r := &node.Return{Token: p.tok}
+
 	p.next()
 	r.Expr = p.parseExpr()
 
 	return r
+}
+
+func (p *Parser) parseIf(invert bool) node.Statement {
+	i := &node.If{Token: p.tok, Invert: invert}
+
+	p.next()
+	i.Cond = p.parseExpr()
+ 	i.Then = p.parseStatements()
+
+ 	if p.tok.Type == token.Else {
+ 		p.next();
+	 	i.Else = p.parseStatements()
+ 	}
+
+	return i
 }
 
 func (p *Parser) parseLet() *node.Let {
@@ -110,8 +132,6 @@ func (p *Parser) parseLet() *node.Let {
 	}
 
 	if p.tok.Type != token.Assign {
-		errors.Error(l.NodeToken().Where, "Uninitialized variables are not allowed")
-		p.next()
 		return l
 	}
 
@@ -119,6 +139,23 @@ func (p *Parser) parseLet() *node.Let {
 	l.Expr = p.parseExpr()
 
 	return l
+}
+
+func (p *Parser) parseMacro() *node.Macro {
+	m := &node.Macro{Token: p.tok}
+
+	p.next()
+	m.Name = p.parseId()
+
+	if p.tok.Type != token.Assign {
+		errors.Error(m.NodeToken().Where, "Macro expression expected")
+		return m
+	}
+
+	p.next()
+	m.Expr = p.parseExpr()
+
+	return m
 }
 
 func (p *Parser) parseId() *node.Id {
@@ -156,6 +193,14 @@ func (p *Parser) parseExpr() (expr node.Expr) {
 
 	case token.Oct:
 		num, err := strconv.ParseInt(p.tok.Data, 8, 64)
+		if err != nil {
+			panic(err)
+		}
+
+		expr = &node.Int{Token: tok, Value: num}
+
+	case token.Bin:
+		num, err := strconv.ParseInt(p.tok.Data, 2, 64)
 		if err != nil {
 			panic(err)
 		}
@@ -245,5 +290,9 @@ func (p *Parser) next() {
 	if p.tok = p.l.NextToken(); p.tok.Type == token.Error {
 		errors.Error(p.tok.Where, p.tok.Data)
 		os.Exit(1)
+	}
+
+	if p.tok.Type == token.EOF {
+		p.WhereFileEnd = p.tok.Where
 	}
 }

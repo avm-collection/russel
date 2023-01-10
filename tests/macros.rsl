@@ -1,0 +1,6 @@
+mac stdout  = 1
+mac message = "Hello, world!\n"
+
+fun (main) {
+	(writef message stdout)
+}

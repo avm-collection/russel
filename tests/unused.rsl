@@ -1,7 +1,7 @@
 fun (test) {
-	(writef "I am an unused function!\n")
+	(writef "I am an unused function!\n" 1)
 }
 
 fun (main) {
-	(writef "Hello\n")
+	(writef "Hello\n" 1)
 }

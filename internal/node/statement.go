@@ -68,6 +68,21 @@ func (l *Let) String()       string      {
 	}
 }
 
+// Macro declaration
+type Macro struct {
+	Token token.Token
+
+	Name *Id
+	Expr Expr
+}
+
+func (m *Macro) statementNode() {}
+func (m *Macro) TypeToString() string      {return "macro declaration"}
+func (m *Macro) NodeToken()    token.Token {return m.Token}
+func (m *Macro) String()       string      {
+	return fmt.Sprintf("macro %v = %v", m.Name.String(), m.Expr.String())
+}
+
 // Return
 type Return struct {
 	Token token.Token
@@ -79,6 +94,28 @@ func (r *Return) statementNode() {}
 func (r *Return) TypeToString() string      {return "return statement"}
 func (r *Return) NodeToken()    token.Token {return r.Token}
 func (r *Return) String()       string      {return r.Expr.String()}
+
+// If
+type If struct {
+	Token token.Token
+
+	Cond  Expr
+	Then *Statements
+	Else *Statements
+
+	Invert bool
+}
+
+func (i *If) statementNode() {}
+func (i *If) TypeToString() string      {return "if statement"}
+func (i *If) NodeToken()    token.Token {return i.Token}
+func (i *If) String()       string      {
+	if i.Else != nil {
+		return fmt.Sprintf("if %v %v else %v", i.Cond.String(), i.Then.String(), i.Else.String())
+	} else {
+		return fmt.Sprintf("if %v %v", i.Cond.String(), i.Then.String())
+	}
+}
 
 // Func declaration
 type Func struct {
