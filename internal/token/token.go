@@ -107,7 +107,7 @@ var tokTypeNames = map[Type]string{
 }
 
 func AllTokensCoveredTest() {
-	if count != 30 {
+	if count != 31 {
 		panic("Cover all token types")
 	}
 }
