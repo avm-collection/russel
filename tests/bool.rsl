@@ -1,3 +1,2 @@
-fun (main) {
+proc (main)
 	(iprint (+ true (- true false)))
-}

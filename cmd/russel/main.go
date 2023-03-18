@@ -7,17 +7,18 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/LordOfTrident/russel/internal/errors"
+	"github.com/avm-collection/goerror"
+
 	"github.com/LordOfTrident/russel/internal/config"
 	"github.com/LordOfTrident/russel/internal/token"
 	"github.com/LordOfTrident/russel/internal/compiler"
 )
 
 var (
-	out   = flag.String("o",     "",    "Path of the output binary")
-	v     = flag.Bool("version", false, "Show the version")
-	maxE  = flag.Int("maxE",     8,     "Max amount of compiler errors")
-	anasm = flag.Bool("s",       false, "Output the AVM assembly file")
+	out  = flag.String("o",       "",    "Path of the output binary")
+	v    = flag.Bool(  "version", false, "Show the version")
+	maxE = flag.Int(   "maxE",    8,     "Max amount of compiler errors")
+	exec = flag.Bool(  "e",       true,  "Make the file executable")
 
 	args []string
 )
@@ -29,7 +30,6 @@ func shiftArgs() (string, bool) {
 
 	arg := args[0]
 	args = args[1:]
-
 	return arg, true
 }
 
@@ -64,8 +64,8 @@ func printTry(arg string) {
 func usage() {
 	fmt.Printf("%v v%v.%v.%v\n\n", config.AsciiLogo,
 	           config.VersionMajor, config.VersionMinor, config.VersionPatch)
-	fmt.Printf("Github: %v\n", config.GithubLink)
-	fmt.Printf("Usage: %v [build [FILE] | run FILE] [OPTIONS]\n", os.Args[0])
+	fmt.Printf( "Github: %v\n", config.GithubLink)
+	fmt.Printf( "Usage: %v [build [FILE] | run FILE] [OPTIONS]\n", os.Args[0])
 	fmt.Println("Options:")
 	fmt.Println("  -help\n        Show this message")
 	fmt.Println("  -h    Alias for -help")
@@ -91,18 +91,15 @@ func build() {
 		if len(filepath.Ext(path)) == 0 {
 			*out = path + ".out"
 		} else {
-			*out = strings.TrimSuffix(path, filepath.Ext(path)) + ".anasm"
+			*out = strings.TrimSuffix(path, filepath.Ext(path))
 		}
 
 		*out = filepath.Base(*out)
-	} else {
-		*out += ".anasm"
 	}
 
 	if len(args) > 0 {
 		printError("Unexpected argument '%v'", args[0])
 		printTry("-h")
-
 		os.Exit(1)
 	}
 
@@ -114,16 +111,14 @@ func compile(path, out string) {
 	if err != nil {
 		printError("Could not open file '%v'", path)
 		printTry("-h")
-
 		os.Exit(1)
 	}
 
 	c := compiler.New(string(data), path)
 
-	err = c.CompileInto(out, *anasm)
+	err = c.CompileInto(out, *exec)
 	if err != nil {
 		printError(err.Error())
-
 		os.Exit(1)
 	}
 }
@@ -137,14 +132,12 @@ func init() {
 	flag.BoolVar(v, "v", *v, "Alias for -version")
 
 	parseArgs()
-
-	errors.Max = *maxE
+	goerror.Max = *maxE
 }
 
 func main() {
 	if *v {
 		version()
-
 		return
 	}
 
@@ -152,7 +145,6 @@ func main() {
 	if !ok {
 		printError("No mode specified")
 		printTry("-h")
-
 		os.Exit(1)
 	}
 
@@ -163,7 +155,6 @@ func main() {
 	default:
 		printError("Unknown mode '%v'", mode)
 		printTry("-h")
-
 		os.Exit(1)
 	}
 }

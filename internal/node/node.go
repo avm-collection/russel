@@ -5,14 +5,16 @@ import (
 )
 
 type Node interface {
-	NodeToken()    token.Token
-	TypeToString() string
-	String()       string
+	NodeWhere() token.Where
+	String()    string
 }
 
-// Statements
-type Statement interface {
+type Stmt interface {
 	Node
+	stmtNode()
+}
 
-	statementNode()
+type Expr interface {
+	Node
+	exprNode()
 }

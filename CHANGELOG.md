@@ -17,3 +17,7 @@
 - `0.12.1`: Add loops
 - `0.13.1`: Add increment, decrement, break, continue
 - `0.14.1`: Add for loops
+- `0.15.1`: Change function declaration syntax
+- `0.16.1`: Change for loop syntax
+- `0.17.1`: Add a let statement in if statement feature
+- `0.18.1`: Use the agen package from anasm, rewrite compiler, syntax changes

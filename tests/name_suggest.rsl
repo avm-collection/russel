@@ -1,10 +1,10 @@
-mac stdout = 1
+macro STDOUT = 1
 
-fun (test) {
-	(writef "My name will be misspelled!\n" stdout)
+proc (test) {
+	(writef "My name will be misspelled!\n" STDOUT)
 }
 
-fun (main) {
+proc (main) {
 	(tset)
-	(writef "Testing\n" sdout)
+	(writef "Testing\n" SDOUT)
 }

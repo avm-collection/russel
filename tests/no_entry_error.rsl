@@ -1,3 +1,3 @@
-fun (test) {
+proc (test) {
 	# I have no entry function
 }

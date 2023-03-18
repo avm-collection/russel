@@ -1,5 +1,3 @@
-mac stdout = 1
-
 let num1 = 0
 let num2 = 1
 let num3
@@ -7,11 +5,11 @@ let num3
 let iterations = 10 # Number of fib sequence iterations
 let i = 0
 
-fun (main) {
+proc (main) {
 	(iprint num1)
 	(iprint num2)
 
-	for ; (< i iterations); ++ i {
+	for (< i iterations); ++ i {
 		num3 = (+ num1 num2)
 		(iprint num3)
 

@@ -7,6 +7,11 @@ type Where struct {
 	Path, Line     string
 }
 
+func (w Where) AtRow()   int    {return w.Row}
+func (w Where) AtCol()   int    {return w.Col}
+func (w Where) GetLen()  int    {return w.Len}
+func (w Where) InFile()  string {return w.Path}
+func (w Where) GetLine() string {return w.Line}
 func (w Where) String() string {
 	return fmt.Sprintf("%v:%v:%v", w.Path, w.Row, w.Col)
 }
@@ -36,8 +41,8 @@ const (
 	LCurly
 	RCurly
 
-	LBracket
-	RBracket
+	LSquare
+	RSquare
 
 	Assign
 	Increment
@@ -47,13 +52,15 @@ const (
 	Colon
 	Dot
 
-	Name
-	Uses
+	Module
+	Import
 
 	Macro
 	Let
-	Func
+	Proc
+
 	Inline
+	Interrupt
 
 	If
 	Unless
@@ -94,8 +101,8 @@ var tokTypeNames = map[Type]string{
 	LCurly: "{",
 	RCurly: "}",
 
-	LBracket: "[",
-	RBracket: "]",
+	LSquare: "[",
+	RSquare: "]",
 
 	Assign:    "=",
 	Increment: "++",
@@ -105,13 +112,15 @@ var tokTypeNames = map[Type]string{
 	Arrow: "->",
 	Colon: ":",
 
-	Name: "keyword name",
-	Uses: "keyword uses",
+	Module: "keyword module",
+	Import: "keyword import",
 
-	Macro:  "keyword mac",
-	Let:    "keyword let",
-	Func:   "keyword fun",
-	Inline: "keyword inline",
+	Macro: "keyword mac",
+	Let:   "keyword let",
+	Proc:  "keyword proc",
+
+	Inline:    "keyword inline",
+	Interrupt: "keyword interrupt",
 
 	If:     "keyword if",
 	Unless: "keyword unless",
@@ -129,7 +138,7 @@ var tokTypeNames = map[Type]string{
 }
 
 func AllTokensCoveredTest() {
-	if count != 39 {
+	if count != 40 {
 		panic("Cover all token types")
 	}
 }

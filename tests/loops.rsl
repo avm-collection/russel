@@ -1,9 +1,9 @@
-mac stdout = 1
+macro STDOUT = 1
 let i = 0
 
-fun (main) {
+proc (main) {
 	while (< i 10) {
-		(writef "i = " stdout)
+		(writef "i = " STDOUT)
 		(iprint i)
 
 		i = (+ i 1)

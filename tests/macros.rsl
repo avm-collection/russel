@@ -1,6 +1,6 @@
-mac stdout  = 1
-mac message = "Hello, world!\n"
+macro STDOUT  = 1
+macro message = "Hello, world!\n"
 
-fun (main) {
-	(writef message stdout)
+proc (main) {
+	(writef message STDOUT)
 }

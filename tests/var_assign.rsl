@@ -1,24 +1,24 @@
-mac stdout = 1
+macro STDOUT = 1
 
 let a = 5
 let b
 
-fun (main) {
+proc (main) {
 	(print_a)
 	(print_b)
 
-	(writef "setting b to a * 3\n" stdout)
+	(writef "setting b to a * 3\n" STDOUT)
 
 	b = (* a 3)
 	(print_b)
 }
 
-fun inline (print_a) {
-	(writef "a = " stdout)
+proc (print_a) [inline] {
+	(writef "a = " STDOUT)
 	(iprint a)
 }
 
-fun inline (print_b) {
-	(writef "b = " stdout)
+proc (print_b) [inline] {
+	(writef "b = " STDOUT)
 	(iprint b)
 }

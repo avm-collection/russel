@@ -1,5 +1,5 @@
 let my_num = (+ 5 5)
 
-fun (main) {
+proc (main) {
 	(iprint my_num)
 }

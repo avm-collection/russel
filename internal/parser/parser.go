@@ -4,7 +4,8 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/LordOfTrident/russel/internal/errors"
+	"github.com/avm-collection/goerror"
+
 	"github.com/LordOfTrident/russel/internal/lexer"
 	"github.com/LordOfTrident/russel/internal/token"
 	"github.com/LordOfTrident/russel/internal/node"
@@ -22,24 +23,24 @@ func New(input, path string) *Parser {
 	return &Parser{l: lexer.New(input, path)}
 }
 
-func (p *Parser) Parse() *node.Statements {
-	topLevel := &node.Statements{Token: p.tok}
+func (p *Parser) Parse() *node.Stmts {
+	topLevel := &node.Stmts{Where: p.tok.Where}
 
 	if p.tok = p.l.NextToken(); p.tok.Type == token.Error {
-		errors.Error(p.tok.Where, p.tok.Data)
+		goerror.Error(p.tok.Where, p.tok.Data)
 		os.Exit(1)
 	}
 
 	for p.tok.Type != token.EOF {
-		var s node.Statement
+		var s node.Stmt
 
 		switch p.tok.Type {
-		case token.Func:  s = p.parseFunc()
+		case token.Proc:  s = p.parseFunc()
 		case token.Let:   s = p.parseLet()
 		case token.Macro: s = p.parseMacro()
 
 		default:
-			errors.Error(p.tok.Where, "Unexpected %v in top-level", p.tok)
+			goerror.Error(p.tok.Where, "Unexpected %v in top-level", p.tok)
 			p.next()
 		}
 
@@ -49,38 +50,37 @@ func (p *Parser) Parse() *node.Statements {
 	return topLevel
 }
 
-func (p *Parser) parseStatements() *node.Statements {
-	statements := &node.Statements{Token: p.tok}
+func (p *Parser) parseStmts() *node.Stmts {
+	n := &node.Stmts{Where: p.tok.Where}
 
 	// One-liners
 	if p.tok.Type != token.LCurly {
-		s := p.parseStatement()
-		statements.List = append(statements.List, s)
+		s := p.parseStmt()
+		n.List = append(n.List, s)
 
-		return statements
+		return n
 	}
 
 	p.next()
 
-	// Statement list
+	// Stmt list
 	for p.tok.Type != token.RCurly {
 		if p.tok.Type == token.EOF {
-			errors.Error(p.tok.Where, "Expected matching '%v', got %v", token.RCurly, p.tok)
-			errors.Note(statements.NodeToken().Where, "Opened here")
+			goerror.Error(p.tok.Where, "Expected matching '%v', got %v", token.RCurly, p.tok)
+			goerror.Note(n.Where, "Opened here")
 			return nil
 		}
 
-		s := p.parseStatement()
+		s := p.parseStmt()
 
-		statements.List = append(statements.List, s)
+		n.List = append(n.List, s)
 	}
 
 	p.next()
-
-	return statements
+	return n
 }
 
-func (p *Parser) parseStatement() node.Statement {
+func (p *Parser) parseStmt() node.Stmt {
 	tok := p.tok
 	switch tok.Type {
 	case token.Let:      return p.parseLet()
@@ -94,154 +94,152 @@ func (p *Parser) parseStatement() node.Statement {
 
 	case token.Break:
 		p.next()
-		return &node.Break{Token: tok}
+		return &node.Break{Where: tok.Where}
 
 	case token.Continue:
 		p.next()
-		return &node.Continue{Token: tok}
+		return &node.Continue{Where: tok.Where}
 
 	case token.Increment:
 		p.next()
-		return &node.Increment{Token: tok, Name: p.parseId()}
+		return &node.Increment{Where: tok.Where, Name: p.parseId()}
 
 	case token.Decrement:
 		p.next()
-		return &node.Increment{Token: tok, Name: p.parseId(), Decrement: true}
+		return &node.Increment{Where: tok.Where, Name: p.parseId(), Negative: true}
 
 	case token.Id:
 		id := p.parseId()
 		switch p.tok.Type {
 		case token.Assign:
 			p.next()
-			return &node.Assign{Token: p.tok, Name: id, Expr: p.parseExpr()}
+			return &node.Assign{Where: p.tok.Where, Name: id, Expr: p.parseExpr()}
 
-		default: return &node.ExprStatement{Expr: id}
+		default: return &node.ExprStmt{Expr: id}
 		}
 
 	default:
 		expr := p.parseExpr()
 
-		return &node.ExprStatement{Expr: expr}
+		return &node.ExprStmt{Expr: expr}
 	}
 }
 
-func (p *Parser) parseReturn() node.Statement {
-	r := &node.Return{Token: p.tok}
+func (p *Parser) parseReturn() node.Stmt {
+	n := &node.Return{Where: p.tok.Where}
 
 	p.next()
-	r.Expr = p.parseExpr()
-
-	return r
+	if p.tok.Type == token.Arrow {
+		p.next()
+		n.Expr = p.parseExpr()
+	}
+	return n
 }
 
-func (p *Parser) parseIf(invert bool) node.Statement {
-	i := &node.If{Token: p.tok, Invert: invert}
+func (p *Parser) parseIf(invert bool) node.Stmt {
+	n := &node.If{Where: p.tok.Where, Invert: invert}
 
 	p.next()
-	i.Cond = p.parseExpr()
- 	i.Then = p.parseStatements()
-
- 	if p.tok.Type == token.Else {
- 		p.next();
-	 	i.Else = p.parseStatements()
- 	}
-
-	return i
-}
-
-func (p *Parser) parseWhile(invert bool) node.Statement {
-	w := &node.While{Token: p.tok, Invert: invert}
-
-	p.next()
-	w.Cond = p.parseExpr()
-	w.Body = p.parseStatements()
-
-	return w
-}
-
-func (p *Parser) parseFor() node.Statement {
-	f := &node.For{Token: p.tok}
-
-	p.next()
-	if p.tok.Type != token.Separator {
-		f.Init = p.parseStatement()
+	if p.tok.Type == token.Let {
+		n.Var = p.parseLet()
 
 		if p.tok.Type != token.Separator {
-			errors.Error(p.tok.Where, "Expected '%v', got %v", token.Separator, p.tok)
-			return f
+			goerror.Error(p.tok.Where, "Expected '%v', got %v", token.Separator, p.tok)
+			return n
 		}
-	}
-
-	p.next()
-	if p.tok.Type != token.Separator {
-		f.Cond = p.parseExpr()
-
-		if p.tok.Type != token.Separator {
-			errors.Error(p.tok.Where, "Expected '%v', got %v", token.Separator, p.tok)
-			return f
-		}
-	}
-
-	p.next()
-	if p.tok.Type != token.Separator {
-		f.Last = p.parseStatement()
-	} else {
 		p.next()
 	}
 
-	f.Body = p.parseStatements()
+	n.Cond = p.parseExpr()
+	n.Then = p.parseStmts()
 
-	return f
+	if p.tok.Type == token.Else {
+		p.next();
+		n.Else = p.parseStmts()
+	}
+	return n
+}
+
+func (p *Parser) parseWhile(invert bool) node.Stmt {
+	n := &node.While{Where: p.tok.Where, Invert: invert}
+
+	p.next()
+	n.Cond = p.parseExpr()
+	n.Body = p.parseStmts()
+	return n
+}
+
+func (p *Parser) parseFor() node.Stmt {
+	n := &node.For{Where: p.tok.Where}
+
+	p.next()
+	if p.tok.Type == token.Let {
+		n.Var = p.parseLet();
+
+		if p.tok.Type != token.Separator {
+			goerror.Error(p.tok.Where, "Expected '%v', got %v", token.Separator, p.tok)
+			return n
+		}
+		p.next()
+	}
+
+	n.Cond = p.parseExpr()
+	if p.tok.Type != token.Separator {
+		goerror.Error(p.tok.Where, "Expected '%v', got %v", token.Separator, p.tok)
+		return n
+	}
+	p.next()
+
+	n.Last = p.parseStmt()
+	n.Body = p.parseStmts()
+	return n
 }
 
 func (p *Parser) parseLet() *node.Let {
-	l := &node.Let{Token: p.tok}
+	n := &node.Let{Where: p.tok.Where}
 
 	p.next()
-	l.Name = p.parseId()
+	n.Name = p.parseId()
 
 	if p.tok.Type == token.Colon {
 		p.next()
 
-		l.Type = p.parseId()
+		n.Type = p.parseId()
 	}
 
 	if p.tok.Type != token.Assign {
-		return l
+		return n
 	}
 
 	p.next()
-	l.Expr = p.parseExpr()
-
-	return l
+	n.Expr = p.parseExpr()
+	return n
 }
 
 func (p *Parser) parseMacro() *node.Macro {
-	m := &node.Macro{Token: p.tok}
+	n := &node.Macro{Where: p.tok.Where}
 
 	p.next()
-	m.Name = p.parseId()
+	n.Name = p.parseId()
 
 	if p.tok.Type != token.Assign {
-		errors.Error(m.NodeToken().Where, "Macro expression expected")
-		return m
+		goerror.Error(n.Where, "Macro expression expected")
+		return n
 	}
 
 	p.next()
-	m.Expr = p.parseExpr()
-
-	return m
+	n.Expr = p.parseExpr()
+	return n
 }
 
 func (p *Parser) parseId() *node.Id {
 	if p.tok.Type != token.Id {
-		errors.Error(p.tok.Where, "Expected identifier, got %v", p.tok)
+		goerror.Error(p.tok.Where, "Expected identifier, got %v", p.tok)
 	}
 
 	tok := p.tok
 	p.next()
-
-	return &node.Id{Token: tok, Value: tok.Data}
+	return &node.Id{Where: tok.Where, Value: tok.Data}
 }
 
 func (p *Parser) parseExpr() (expr node.Expr) {
@@ -256,7 +254,7 @@ func (p *Parser) parseExpr() (expr node.Expr) {
 			panic(err)
 		}
 
-		expr = &node.Int{Token: tok, Value: num}
+		expr = &node.Int{Where: tok.Where, Value: num}
 
 	case token.Hex:
 		num, err := strconv.ParseInt(p.tok.Data, 16, 64)
@@ -264,7 +262,7 @@ func (p *Parser) parseExpr() (expr node.Expr) {
 			panic(err)
 		}
 
-		expr = &node.Int{Token: tok, Value: num}
+		expr = &node.Int{Where: tok.Where, Value: num}
 
 	case token.Oct:
 		num, err := strconv.ParseInt(p.tok.Data, 8, 64)
@@ -272,7 +270,7 @@ func (p *Parser) parseExpr() (expr node.Expr) {
 			panic(err)
 		}
 
-		expr = &node.Int{Token: tok, Value: num}
+		expr = &node.Int{Where: tok.Where, Value: num}
 
 	case token.Bin:
 		num, err := strconv.ParseInt(p.tok.Data, 2, 64)
@@ -280,65 +278,77 @@ func (p *Parser) parseExpr() (expr node.Expr) {
 			panic(err)
 		}
 
-		expr = &node.Int{Token: tok, Value: num}
+		expr = &node.Int{Where: tok.Where, Value: num}
 
-	case token.True:   expr = &node.Bool{Token: tok, Value: true}
-	case token.False:  expr = &node.Bool{Token: tok, Value: false}
-	case token.String: expr = &node.String{Token: tok, Value: tok.Data}
+	case token.True:   expr = &node.Bool{Where: tok.Where, Value: true}
+	case token.False:  expr = &node.Bool{Where: tok.Where, Value: false}
+	case token.String: expr = &node.String{Where: tok.Where, Value: tok.Data}
 
-	default: errors.Error(p.tok.Where, "Unexpected %v", p.tok)
+	default: goerror.Error(p.tok.Where, "Unexpected %v", p.tok)
 	}
 
 	p.next()
-
 	return
 }
 
 func (p *Parser) parseFuncCall() *node.FuncCall {
-	fc := &node.FuncCall{Token: p.tok}
+	n := &node.FuncCall{Where: p.tok.Where}
 
 	start := p.tok.Where
 	p.next()
-	fc.Name = p.parseId()
+	n.Name = p.parseId()
 
 	for p.tok.Type != token.RParen {
 		if p.tok.Type == token.EOF {
-			errors.Error(p.tok.Where, "Expected matching '%v', got %v", token.RParen, p.tok)
-			errors.Note(start, "Opened here")
+			goerror.Error(p.tok.Where, "Expected matching '%v', got %v", token.RParen, p.tok)
+			goerror.Note(start, "Opened here")
 			return nil
 		}
 
-		fc.Args = append(fc.Args, p.parseExpr())
+		n.Args = append(n.Args, p.parseExpr())
 	}
 	p.next()
+	return n
+}
 
-	return fc
+var attrsMap = map[token.Type]int{
+	token.Inline:    node.AttrInline,
+	token.Interrupt: node.AttrInterrupt,
+}
+
+func (p *Parser) parseAttrs() (attrs int) {
+	p.next()
+	for p.tok.Type != token.RSquare {
+		attr, ok := attrsMap[p.tok.Type]
+		if !ok {
+			goerror.Error(p.tok.Where, "Expected an attribute, got %v", p.tok)
+		}
+
+		attrs |= attr
+		p.next()
+	}
+	p.next()
+	return
 }
 
 func (p *Parser) parseFunc() *node.Func {
-	f := &node.Func{Token: p.tok}
+	n := &node.Func{Where: p.tok.Where}
 
-	if p.next(); p.tok.Type == token.Inline {
-		f.Inline = true
-
-		p.next()
-	}
-
-	if p.tok.Type != token.LParen {
-		errors.Error(p.tok.Where, "Expected '%v' to open function head definition, got %v",
-		             token.LParen, p.tok)
+	if p.next(); p.tok.Type != token.LParen {
+		goerror.Error(p.tok.Where, "Expected '%v' to open function head definition, got %v",
+		              token.LParen, p.tok)
 		p.next()
 		return nil
 	}
 
 	p.next()
-	f.Name = p.parseId()
+	n.Name = p.parseId()
 
 	start := p.tok.Where
 	for p.tok.Type != token.RParen {
 		if p.tok.Type == token.EOF {
-			errors.Error(p.tok.Where, "Expected matching '%v', got %v", token.RParen, p.tok)
-			errors.Note(start, "Opened here")
+			goerror.Error(p.tok.Where, "Expected matching '%v', got %v", token.RParen, p.tok)
+			goerror.Note(start, "Opened here")
 			return nil
 		}
 
@@ -346,16 +356,19 @@ func (p *Parser) parseFunc() *node.Func {
 
 		p.next()
 	}
+	p.next()
 
-	if p.next(); p.tok.Type == token.Arrow {
-		p.next()
-
-		f.Type = p.parseId()
+	if p.tok.Type == token.LSquare {
+		n.Attrs = p.parseAttrs()
 	}
 
- 	f.Body = p.parseStatements()
+	if p.tok.Type == token.Arrow {
+		p.next()
+		n.Type = p.parseId()
+	}
 
-	return f
+ 	n.Body = p.parseStmts()
+	return n
 }
 
 func (p *Parser) next() {
@@ -364,7 +377,7 @@ func (p *Parser) next() {
 	}
 
 	if p.tok = p.l.NextToken(); p.tok.Type == token.Error {
-		errors.Error(p.tok.Where, p.tok.Data)
+		goerror.Error(p.tok.Where, p.tok.Data)
 		os.Exit(1)
 	}
 

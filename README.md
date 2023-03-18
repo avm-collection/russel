@@ -1,17 +1,16 @@
 <p align="center">
 	<img width="350px" src="res/logo.png">
 </p>
-<p align="center">A programming language</p>
 
 <p align="center">
 	<a href="./LICENSE">
-		<img alt="License" src="https://img.shields.io/badge/license-GPL-blue?color=26d374"/>
+		<img alt="License" src="https://img.shields.io/badge/license-GPL v3-26c374?style=for-the-badge">
 	</a>
 	<a href="https://github.com/avm-collection/russel/issues">
-		<img alt="Issues" src="https://img.shields.io/github/issues/avm-collection/russel?color=4f79e4"/>
+		<img alt="Issues" src="https://img.shields.io/github/issues/avm-collection/russel?style=for-the-badge&color=4f79e4">
 	</a>
 	<a href="https://github.com/avm-collection/russel/pulls">
-		<img alt="GitHub pull requests" src="https://img.shields.io/github/issues-pr/avm-collection/russel?color=4f79e4"/>
+		<img alt="GitHub pull requests" src="https://img.shields.io/github/issues-pr/avm-collection/russel?style=for-the-badge&color=4f79e4">
 	</a>
 </p>
 
@@ -19,7 +18,7 @@
 This is a VERY unfinished language, so expect bugs, many missing features, ugly internal code (im
 not responsible for eye damage after the sight), changing syntax and more.
 
-A very unfinished statically typed programming language compiled to the
+A statically typed programming language compiled to the
 [AVM virtual machine](https://github.com/avm-collection/avm) bytecode
 
 ## Table of contents

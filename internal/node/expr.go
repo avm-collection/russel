@@ -6,48 +6,39 @@ import (
 	"github.com/LordOfTrident/russel/internal/token"
 )
 
-type Expr interface {
-	Node
-
-	exprNode()
-}
-
 // Identifier
 type Id struct {
-	Token token.Token
+	Where token.Where
 
 	Value string
 }
 
-func (i *Id) exprNode() {}
-func (i *Id) TypeToString() string      {return "identifier"}
-func (i *Id) NodeToken()    token.Token {return i.Token}
-func (i *Id) String()       string      {return i.Value}
+func (n *Id) exprNode() {}
+func (n *Id) NodeWhere() token.Where {return n.Where}
+func (n *Id) String() string {return n.Value}
 
 // Integer
 type Int struct {
-	Token token.Token
+	Where token.Where
 
 	Value int64
 }
 
-func (i *Int) exprNode() {}
-func (i *Int) TypeToString() string      {return "integer"}
-func (i *Int) NodeToken()    token.Token {return i.Token}
-func (i *Int) String()       string      {return strconv.Itoa(int(i.Value))}
+func (n *Int) exprNode() {}
+func (n *Int) NodeWhere() token.Where {return n.Where}
+func (n *Int) String() string {return strconv.Itoa(int(n.Value))}
 
 // Bool
 type Bool struct {
-	Token token.Token
+	Where token.Where
 
 	Value bool
 }
 
-func (b *Bool) exprNode() {}
-func (b *Bool) TypeToString() string      {return "bool"}
-func (b *Bool) NodeToken()    token.Token {return b.Token}
-func (b *Bool) String()       string {
-	if b.Value {
+func (n *Bool) exprNode() {}
+func (n *Bool) NodeWhere() token.Where {return n.Where}
+func (n *Bool) String() string {
+	if n.Value {
 		return "true"
 	} else {
 		return "false"
@@ -56,31 +47,29 @@ func (b *Bool) String()       string {
 
 // String
 type String struct {
-	Token token.Token
+	Where token.Where
 
 	Value string
 }
 
-func (s *String) exprNode() {}
-func (s *String) TypeToString() string      {return "string"}
-func (s *String) NodeToken()    token.Token {return s.Token}
-func (s *String) String()       string      {return "\"" + s.Value + "\""}
+func (n *String) exprNode() {}
+func (n *String) NodeWhere() token.Where {return n.Where}
+func (n *String) String() string {return "\"" + n.Value + "\""}
 
 // Func call
 type FuncCall struct {
-	Token token.Token
+	Where token.Where
 
 	Name *Id
 	Args []Expr
 }
 
-func (fc *FuncCall) exprNode() {}
-func (fc *FuncCall) TypeToString() string       {return "function call"}
-func (fc *FuncCall) NodeToken()    token.Token  {return fc.Token}
-func (fc *FuncCall) String()       (str string) {
-	str = "(" + fc.Name.String()
+func (n *FuncCall) exprNode() {}
+func (n *FuncCall) NodeWhere() token.Where {return n.Where}
+func (n *FuncCall) String() (str string) {
+	str = "(" + n.Name.String()
 
-	for _, s := range fc.Args {
+	for _, s := range n.Args {
 		str += " " + s.String()
 	}
 

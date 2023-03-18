@@ -2,11 +2,11 @@ package compiler
 
 import (
 	"os"
-	"os/exec"
-	"fmt"
 	"math"
 
-	"github.com/LordOfTrident/russel/internal/errors"
+	"github.com/avm-collection/goerror"
+	"github.com/avm-collection/agen"
+
 	"github.com/LordOfTrident/russel/internal/parser"
 	"github.com/LordOfTrident/russel/internal/node"
 	"github.com/LordOfTrident/russel/internal/token"
@@ -46,422 +46,7 @@ func levenDist(a, b string) int {
 	return d[len(a)][len(b)]
 }
 
-const MainFuncName = "main"
-
-type Func struct {
-	node *node.Func
-
-	compiled bool
-	asm      string
-}
-
-func NewFunc(node *node.Func) *Func {
-	return &Func{node: node}
-}
-
-func (f *Func) compile(c *Compiler) {
-	f.compiled = true
-	f.asm      = c.compileFunc(f.node)
-}
-
-type Var struct {
-	node *node.Let
-
-	used bool
-}
-
-func NewVar(node *node.Let) *Var {
-	return &Var{node: node}
-}
-
-type ids struct {
-	prefix   string
-	strCount int
-	labelCount, labelNest int
-
-	currentLoopLabel string
-}
-
-type Compiler struct {
-	p *parser.Parser
-
-	funcs      map[string]*Func
-	intrinsics map[string]string
-
-	macros map[string]*node.Macro
-
-	vars map[string]*Var
-
-	ids ids
-}
-
-func New(input, path string) *Compiler {
-	c := &Compiler{
-		p: parser.New(input, path),
-
-		funcs:      make(map[string]*Func),
-		intrinsics: make(map[string]string),
-
-		macros: make(map[string]*node.Macro),
-
-		vars: make(map[string]*Var),
-	}
-
-	c.addIntrinsics()
-
-	return c
-}
-
-func (c *Compiler) addIntrinsics() {
-	c.intrinsics["writef"] = c.genInst("wrf", "") + c.genInst("pop", "")
-	c.intrinsics["iprint"] = c.genInst("prt", "")
-	c.intrinsics["fprint"] = c.genInst("fpr", "")
-
-	c.intrinsics["+"] = c.genInst("add", "")
-	c.intrinsics["-"] = c.genInst("sub", "")
-	c.intrinsics["*"] = c.genInst("mul", "")
-	c.intrinsics["/"] = c.genInst("div", "")
-
-	c.intrinsics["=="] = c.genInst("equ", "")
-	c.intrinsics["/="] = c.genInst("neq", "")
-	c.intrinsics[">"]  = c.genInst("grt", "")
-	c.intrinsics[">="] = c.genInst("geq", "")
-	c.intrinsics["<"]  = c.genInst("les", "")
-	c.intrinsics["<="] = c.genInst("leq", "")
-
-	c.intrinsics["not"] = c.genInst("not", "")
-	c.intrinsics["and"] = c.genInst("and", "")
-	c.intrinsics["or"]  = c.genInst("orr", "")
-
-	c.intrinsics["exit"] = c.genInst("hlt", "")
-}
-
-func (c *Compiler) compileFunc(f *node.Func) (asm string) {
-	if f.Inline {
-		asm += c.compileStatements(f.Body)
-	} else {
-		prev := c.ids
-		c.ids = ids{prefix: f.Name.Value}
-
-		asm += fmt.Sprintf(".f_%v\n", f.Name.Value)
-		asm += c.compileStatements(f.Body)
-		asm += c.genInst("ret", "")
-
-		c.ids = prev
-	}
-
-	return
-}
-
-func (c *Compiler) genInst(inst, format string, args... interface{}) string {
-	return fmt.Sprintf("\t" + inst + " " + format + "\n", args...)
-}
-
-func (c *Compiler) genFuncCall(name string) string {
-	return c.genInst("cal", "f_%v", name)
-}
-
-func (c *Compiler) genLabel(name string) string {
-	return fmt.Sprintf(".%v\n", name)
-}
-
-func (c *Compiler) genVarRead(name string) (asm string) {
-	asm += c.genInst("psh", "v_%v", name)
-	asm += c.genInst("r64", "")
-
-	return
-}
-
-func (c *Compiler) genVarWrite(name string) (asm string) {
-	asm += c.genInst("psh", "v_%v", name)
-	asm += c.genInst("swp", "0")
-	asm += c.genInst("w64", "")
-
-	return
-}
-
-func (c *Compiler) CompileInto(path string, anasm bool) error {
-	program := c.p.Parse()
-	if errors.Happend() {
-		os.Exit(1)
-	}
-
-	compiled := c.compile(program)
-	if errors.Happend() {
-		os.Exit(1)
-	}
-
-	f, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-
-	f.Write([]byte(compiled))
-	f.Close()
-
-	if !anasm {
-		if err := c.anasmToExec(path); err != nil {
-			return err
-		}
-
-		fmt.Printf("Remove '%v'\n", path)
-		if err := os.Remove(path); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (c *Compiler) anasmToExec(path string) error {
-	if !errors.NoOutput() {
-		fmt.Println()
-	}
-
-	fmt.Printf("[CMD] anasm '%v'\n", path)
-	cmd := exec.Command("anasm", path)
-	cmd.Stderr = os.Stderr
-	cmd.Stdout = os.Stdout
-	cmd.Stdin  = os.Stdin
-
-	if err := cmd.Start(); err != nil {
-		return err
-	}
-
-	if err := cmd.Wait(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (c *Compiler) compile(program *node.Statements) (asm string) {
-	for _, statement := range program.List {
-		switch s := statement.(type) {
-		case *node.Func:  c.registerFunc(s)
-		case *node.Macro: c.registerMacro(s)
-		case *node.Let:   c.registerVar(s)
-
-		default: panic("TODO: Unimplemented")
-		}
-	}
-
-	main, ok := c.funcs[MainFuncName]
-	if !ok {
-		errors.Simple("Missing entry function '%v'", MainFuncName)
-		errors.NoteSuggestNewCode(c.p.WhereFileEnd, "Suggestion: add", []string{
-			"fun (main) -> int {",
-			"    # Put your entry code here",
-			"",
-			"    return 0",
-			"}",
-		})
-		return
-	}
-
-	main.compile(c)
-	asm += main.asm
-
-	for name, func_ := range c.funcs {
-		if name == MainFuncName {
-			continue
-		}
-
-		if !func_.compiled {
-			errors.Warning(func_.node.Token.Where, "Unused function '%v'", name)
-			continue
-		}
-
-		if !func_.node.Inline {
-			asm += "\n" + func_.asm
-		}
-	}
-
-	init := c.genLabel("entry")
-	for name, var_ := range c.vars {
-		if !var_.used {
-			errors.Warning(var_.node.Token.Where, "Unused variable '%v'", name)
-			continue
-		}
-
-		// TODO: initialize this using const expressions,
-		//       do not allow non-const expressions like now
-		init += fmt.Sprintf("let v_%v i64 = 0\n", name)
-		if var_.node.Expr != nil {
-			init += c.compileExpr(var_.node.Expr)
-			init += c.genVarWrite(name)
-		}
-	}
-
-	init += c.genFuncCall("main")
-	init += c.genInst("psh", "0")
-	init += c.genInst("hlt", "")
-	init += "\n"
-
-	asm = init + asm
-
-	return
-}
-
-func (c *Compiler) nameExists(where token.Where, name string) bool {
-	if prev, ok := c.macros[name]; ok {
-		errors.Error(where, "Macro '%v' redefined", name)
-		errors.Note(prev.Token.Where, "Previously defined here")
-		return true
-	}
-
-	if _, ok := c.intrinsics[name]; ok {
-		errors.Error(where, "Intrinsic '%v' redefined", name)
-		return true
-	}
-
-	if prev, ok := c.funcs[name]; ok {
-		errors.Error(where, "Function '%v' redefined", name)
-		errors.Note(prev.node.Token.Where, "Previously defined here")
-		return true
-	}
-
-	if prev, ok := c.vars[name]; ok {
-		errors.Error(where, "Variable '%v' redefined", name)
-		errors.Note(prev.node.Token.Where, "Previously defined here")
-		return true
-	}
-
-	return false
-}
-
-func (c *Compiler) registerVar(l *node.Let) {
-	name := l.Name.Value
-	if c.nameExists(l.Token.Where, name) {
-		return
-	}
-
-	c.vars[name] = NewVar(l)
-}
-
-func (c *Compiler) registerFunc(f *node.Func) {
-	name := f.Name.Value
-	if c.nameExists(f.Token.Where, name) {
-		return
-	}
-
-	if f.Type != nil {
-		panic("TODO: Return type not allowed for functions except 'main'")
-	}
-
-	c.funcs[name] = NewFunc(f)
-}
-
-func (c *Compiler) registerMacro(m *node.Macro) {
-	name := m.Name.Value
-	if c.nameExists(m.Token.Where, name) {
-		return
-	}
-
-	c.macros[name] = m
-}
-
-func (c *Compiler) compileStatements(ss *node.Statements) (asm string) {
-	for _, statement := range ss.List {
-		asm += c.compileStatement(statement)
-	}
-
-	return
-}
-
-func (c *Compiler) compileStatement(statement node.Statement) string {
-	switch s := statement.(type) {
-	case *node.ExprStatement: return c.compileExpr(s.Expr)
-	case *node.Return:        return c.compileReturn(s)
-	case *node.If:            return c.compileIf(s)
-	case *node.While:         return c.compileWhile(s)
-	case *node.For:           return c.compileFor(s)
-	case *node.Assign:        return c.compileAssign(s)
-	case *node.Increment:     return c.compileIncrement(s)
-	case *node.Break:         return c.compileBreak(s)
-	case *node.Continue:      return c.compileContinue(s)
-
-	default: panic("TODO: Unimplemented")
-	}
-}
-
-func (c *Compiler) compileExpr(expr node.Expr) string {
-	switch e := expr.(type) {
-	case *node.Int:      return c.compileInt(e)
-	case *node.Bool:     return c.compileBool(e)
-	case *node.String:   return c.compileString(e)
-	case *node.FuncCall: return c.compileFuncCall(e)
-	case *node.Id:       return c.compileId(e)
-
-	default: panic("TODO: Unimplemented")
-	}
-}
-
-func (c *Compiler) compileId(id *node.Id) string {
-	if macro, ok := c.macros[id.Value]; ok {
-		return c.compileExpr(macro.Expr)
-	} else if var_, ok := c.vars[id.Value]; ok {
-		var_.used = true
-		c.vars[id.Value] = var_
-
-		return c.genVarRead(id.Value)
-	}
-
-	errors.Error(id.Token.Where, "Unknown macro/variable '%v'", id.Value)
-
-	names := []string{}
-	for _, macro := range c.macros {
-		names = append(names, macro.Name.Value)
-	}
-
-	similar := c.getMostSimilarName(id.Value, names)
-	if len(similar) > 0 {
-		errors.NoteSuggestName(id.Token.Where, similar)
-	}
-
-	return ""
-}
-
-func (c *Compiler) compileInt(int_ *node.Int) string {
-	return c.genInst("psh", "%v", int_.Value)
-}
-
-func (c *Compiler) compileBool(bool_ *node.Bool) string {
-	if bool_.Value {
-		return c.genInst("psh", "1")
-	} else {
-		return c.genInst("psh", "0")
-	}
-}
-
-func (c *Compiler) compileString(str *node.String) (asm string) {
-	name := fmt.Sprintf("s_%v_%v", c.ids.prefix, c.ids.strCount)
-	c.ids.strCount ++
-
-	asm += fmt.Sprintf("\tlet %v char = ", name)
-	first := true
-	for i, ch := range str.Value {
-		if first {
-			first = false
-		} else {
-			asm += ", "
-		}
-
-		if i % 16 == 0 {
-			asm += "\n\t\t"
-		}
-
-		asm += fmt.Sprintf("%v", int(ch))
-	}
-	asm += "\n"
-
-	asm += c.genInst("psh", name)
-	asm += c.genInst("psh", "(sizeof %v)", name)
-
-	return
-}
-
-func (c *Compiler) getMostSimilarName(name string, names []string) string {
+func getMostSimilarName(name string, names []string) string {
 	smallest := -1
 	which    := ""
 
@@ -476,204 +61,516 @@ func (c *Compiler) getMostSimilarName(name string, names []string) string {
 	return which
 }
 
-func (c *Compiler) compileAssign(a *node.Assign) (asm string) {
-	asm += c.compileExpr(a.Expr)
-	asm += c.genVarWrite(a.Name.Value)
+const MainFuncName = "main"
 
-	return
+type Func struct {
+	Used  bool
+	Addr  agen.Word
+	Node *node.Func
 }
 
-func (c *Compiler) compileIncrement(i *node.Increment) (asm string) {
-	asm += c.genVarRead(i.Name.Value)
+type Var struct {
+	Used bool
+	Addr agen.Word
+}
 
-	if (i.Decrement) {
-		asm += c.genInst("dec", "")
+type Macro struct {
+	Used bool
+	Expr node.Expr
+}
+
+type Call struct {
+	Name string
+	Addr agen.Word
+}
+
+type Compiler struct {
+	p *parser.Parser
+	a *agen.AGEN
+
+	funcs  map[string]Func
+	vars   map[string]Var
+	macros map[string]Macro
+
+	toCompile     []Func
+	deferredCalls []Call
+
+	inLoop bool
+	breaks, continues []agen.Word
+}
+
+func New(input, path string) *Compiler {
+	c := &Compiler{
+		p: parser.New(input, path),
+		a: agen.New(),
+
+		funcs:  make(map[string]Func),
+		vars:   make(map[string]Var),
+		macros: make(map[string]Macro),
+	}
+
+	return c
+}
+
+func (c *Compiler) CompileInto(path string, exec bool) error {
+	program := c.p.Parse()
+	if goerror.Happened() {
+		os.Exit(1)
+	}
+
+	if c.compile(program); goerror.Happened() {
+		os.Exit(1)
+	}
+
+	return c.a.CreateExecAVM(path, exec)
+}
+
+func (c *Compiler) compile(program *node.Stmts) {
+	for _, stmt := range program.List {
+		switch s := stmt.(type) {
+		case *node.Func:  c.registerFunc(s)
+		case *node.Macro: c.registerMacro(s)
+		case *node.Let:   c.registerVar(s)
+
+		default: panic("TODO: Unimplemented")
+		}
+	}
+
+	main, ok := c.funcs[MainFuncName]
+	if !ok {
+		goerror.SimpleError("Missing entry function '%v'", MainFuncName)
+		goerror.NoteSuggestNewCode(c.p.WhereFileEnd, "Suggestion: add", []string{
+			"proc (main) -> int {",
+			"    # Put your entry code here",
+			"",
+			"    return -> 0",
+			"}",
+		})
+	}
+
+	c.compileFunc(main)
+
+	for name, func_ := range c.funcs {
+		if !func_.Used {
+			goerror.Warning(func_.Node.Where, "Unused function '%v'", name)
+			continue
+		}
+	}
+
+	c.a.SetEntryHere()
+	c.a.AddInstWith("cal", main.Addr)
+	c.a.AddInstWith("psh", 0)
+	c.a.AddInst(    "hlt")
+}
+
+func (c *Compiler) checkNameExists(where token.Where, name string) bool {
+	if prev, ok := c.funcs[name]; ok {
+		goerror.Error(where, "Function '%v' redefined", name)
+		goerror.Note(prev.Node.Where, "Previously defined here")
+		return true
+	}
+
+	return false
+}
+
+func (c *Compiler) registerFunc(n *node.Func) {
+	name := n.Name.Value
+	if (c.checkNameExists(n.Where, name)) {
+		return
+	}
+
+	if name != MainFuncName && n.Type != nil {
+		panic("TODO: Return type not allowed for functions except 'main'")
+	}
+
+	c.funcs[n.Name.Value] = Func{Node: n}
+}
+
+func (c *Compiler) registerMacro(n *node.Macro) {
+}
+
+func (c *Compiler) registerVar(n *node.Let) {
+}
+
+func (c *Compiler) compileFunc(f Func) {
+	if !f.Used {
+		f.Used = true;
+		c.funcs[f.Node.Name.Value] = f
+	}
+
+	if f.Node.Attrs & node.AttrInline != 0 {
+		c.compileStmts(f.Node.Body)
 	} else {
-		asm += c.genInst("inc", "")
+		f.Addr = c.a.Label()
+		c.funcs[f.Node.Name.Value] = f
+		c.compileStmts(f.Node.Body)
+		c.a.AddInst("ret")
 	}
 
-	asm += c.genVarWrite(i.Name.Value)
+	toCompile := make([]Func, len(c.toCompile))
+	copy(toCompile, c.toCompile)
+	c.toCompile = c.toCompile[:0]
 
-	return
-}
+	deferredCalls := make([]Call, len(c.deferredCalls))
+	copy(deferredCalls, c.deferredCalls)
+	c.deferredCalls = c.deferredCalls[:0]
 
-func (c *Compiler) compileIf(i *node.If) (asm string) {
-	name := fmt.Sprintf("l_%v_%v_%v", c.ids.prefix, c.ids.labelCount, c.ids.labelNest)
-	c.ids.labelNest ++
-
-	labelElse := name + "_else"
-	labelEnd  := name + "_end_if"
-
-	asm += c.compileExpr(i.Cond)
-	if (!i.Invert) {
-		asm += c.genInst("not", "")
-	}
-
-	if i.Else != nil {
-		asm += c.genInst("jnz", labelElse)
-	} else {
-		asm += c.genInst("jnz", labelEnd)
-	}
-
-	asm += c.compileStatements(i.Then)
-	if i.Else != nil {
-		asm += c.genInst("jmp", labelEnd)
-		asm += c.genLabel(labelElse)
-		asm += c.compileStatements(i.Else)
-	}
-
-	asm += c.genLabel(labelEnd)
-
-	c.ids.labelNest  --
-	c.ids.labelCount ++
-
-	return
-}
-
-func (c *Compiler) compileWhile(w *node.While) (asm string) {
-	name := fmt.Sprintf("l_%v_%v_%v", c.ids.prefix, c.ids.labelCount, c.ids.labelNest)
-	c.ids.labelNest ++
-
-	prev := c.ids.currentLoopLabel
-	c.ids.currentLoopLabel = name
-
-	labelCond := name + "_loop"
-	labelEnd  := name + "_end_loop"
-
-	asm += c.genLabel(labelCond)
-	asm += c.compileExpr(w.Cond)
-	if (!w.Invert) {
-		asm += c.genInst("not", "")
-	}
-
-	asm += c.genInst("jnz", labelEnd)
-	asm += c.compileStatements(w.Body)
-	asm += c.genInst("jmp", labelCond)
-	asm += c.genLabel(labelEnd)
-
-	c.ids.labelNest  --
-	c.ids.labelCount ++
-
-	c.ids.currentLoopLabel = prev
-
-	return
-}
-
-func (c *Compiler) compileFor(f *node.For) (asm string) {
-	name := fmt.Sprintf("l_%v_%v_%v", c.ids.prefix, c.ids.labelCount, c.ids.labelNest)
-	c.ids.labelNest ++
-
-	prev := c.ids.currentLoopLabel
-	c.ids.currentLoopLabel = name
-
-	labelCond := name + "_loop"
-	labelSkip := name + "_loop_skip"
-	labelEnd  := name + "_end_loop"
-
-	if f.Init != nil {
-		asm += c.compileStatement(f.Init)
-	}
-
-	asm += c.genInst("jmp", labelSkip)
-	asm += c.genLabel(labelCond)
-
-	if f.Last != nil {
-		asm += c.compileStatement(f.Last)
-	}
-
-	asm += c.genLabel(labelSkip)
-
-	if f.Cond != nil {
-		asm += c.compileExpr(f.Cond)
-	} else {
-		asm += c.genInst("psh", "1")
-	}
-
-	asm += c.genInst("not", "")
-	asm += c.genInst("jnz", labelEnd)
-	asm += c.compileStatements(f.Body)
-	asm += c.genInst("jmp", labelCond)
-	asm += c.genLabel(labelEnd)
-
-	c.ids.labelNest  --
-	c.ids.labelCount ++
-
-	c.ids.currentLoopLabel = prev
-
-	return
-}
-
-func (c *Compiler) compileFuncCall(f *node.FuncCall) (asm string) {
-	name := f.Name.Value
-
-	if intrinsic, ok := c.intrinsics[name]; ok {
-		for _, arg := range f.Args {
-			asm += c.compileExpr(arg)
+	for _, func_ := range toCompile {
+		if func_ := c.funcs[func_.Node.Name.Value]; func_.Used {
+			continue
 		}
 
-		asm += intrinsic
+		c.compileFunc(func_)
+	}
 
+	for _, call := range deferredCalls {
+		c.a.GetInstAt(call.Addr).Data = c.funcs[call.Name].Addr
+	}
+}
+
+func (c *Compiler) compileStmts(n *node.Stmts) {
+	for _, stmt := range n.List {
+		c.compileStmt(stmt)
+	}
+}
+
+func (c *Compiler) compileStmt(n node.Stmt) {
+	switch s := n.(type) {
+	case *node.ExprStmt:  c.compileExpr(s.Expr)
+	case *node.Let:       c.compileLet(s)
+	case *node.Return:    c.compileReturn(s)
+	case *node.If:        c.compileIf(s)
+	case *node.While:     c.compileWhile(s)
+	case *node.For:       c.compileFor(s)
+	case *node.Assign:    c.compileAssign(s)
+	case *node.Increment: c.compileIncrement(s)
+	case *node.Break:     c.compileBreak(s)
+	case *node.Continue:  c.compileContinue(s)
+
+	default: panic("TODO: Unimplemented")
+	}
+}
+
+func (c *Compiler) compileExpr(n node.Expr) {
+	switch e := n.(type) {
+	case *node.Int:      c.compileInt(e)
+	case *node.Bool:     c.compileBool(e)
+	case *node.String:   c.compileString(e)
+	case *node.FuncCall: c.compileFuncCall(e)
+	case *node.Id:       c.compileId(e)
+
+	default: panic("TODO: Unimplemented")
+	}
+}
+
+func (c *Compiler) compileInt(n *node.Int) {
+	c.a.AddInstWith("psh", agen.Word(n.Value))
+}
+
+func (c *Compiler) compileBool(n *node.Bool) {
+	if n.Value {
+		c.a.AddInstWith("psh", 1)
+	} else {
+		c.a.AddInstWith("psh", 0)
+	}
+}
+
+func (c *Compiler) compileString(n *node.String) {
+	addr := c.a.AddMemoryString(n.Value)
+	c.a.AddInstWith("psh", addr)
+	c.a.AddInstWith("psh", agen.Word(len(n.Value)))
+}
+
+func (c *Compiler) getFuncNames() (names []string) {
+	for name, _ := range c.funcs {
+		names = append(names, name)
+	}
+	return
+}
+
+func (c *Compiler) getVarAndMacroNames() (names []string) {
+	for name, _ := range c.vars {
+		names = append(names, name)
+	}
+
+	for name, _ := range c.macros {
+		names = append(names, name)
+	}
+	return
+}
+
+func (c *Compiler) compileFuncCall(n *node.FuncCall) {
+	name := n.Name.Value
+
+	for _, expr := range n.Args {
+		c.compileExpr(expr)
+	}
+
+	// TODO: Make an intrinsic system
+	if name == "writef" {
+		c.a.AddInst("wrf")
+		return
+	} else if name == "iprint" {
+		c.a.AddInst("prt")
+		return
+	} else if name == "fprint" {
+		c.a.AddInst("fpr")
+		return
+	} else if name == "halt" {
+		c.a.AddInst("hlt")
+		return
+	} else if name == "+" {
+		c.a.AddInst("add")
+		return
+	} else if name == "-" {
+		c.a.AddInst("sub")
+		return
+	} else if name == "*" {
+		c.a.AddInst("mul")
+		return
+	} else if name == "/" {
+		c.a.AddInst("div")
+		return
+	} else if name == "%" {
+		c.a.AddInst("mod")
+		return
+	} else if name == "not" {
+		c.a.AddInst("not")
+		return
+	} else if name == "and" {
+		c.a.AddInst("and")
+		return
+	} else if name == "or" {
+		c.a.AddInst("orr")
+		return
+	} else if name == "==" {
+		c.a.AddInst("equ")
+		return
+	} else if name == "/=" {
+		c.a.AddInst("neq")
+		return
+	} else if name == ">" {
+		c.a.AddInst("grt")
+		return
+	} else if name == ">=" {
+		c.a.AddInst("geq")
+		return
+	} else if name == "<" {
+		c.a.AddInst("les")
+		return
+	} else if name == "<=" {
+		c.a.AddInst("leq")
 		return
 	}
 
 	func_, ok := c.funcs[name]
 	if !ok {
-		errors.Error(f.Name.Token.Where, "Unknown function '%v'", name)
+		goerror.Error(n.Name.Where, "Unknown function '%v'", name)
 
-		names := []string{}
-		for _, func_ := range c.funcs {
-			names = append(names, func_.node.Name.Value)
-		}
-
-		similar := c.getMostSimilarName(name, names)
+		similar := getMostSimilarName(name, c.getFuncNames())
 		if len(similar) > 0 {
-			errors.NoteSuggestName(f.Name.Token.Where, similar)
+			goerror.NoteSuggestName(n.Name.Where, similar)
+		}
+		return
+	}
+
+	if func_.Node.Attrs & node.AttrInline != 0 {
+		c.compileFunc(func_)
+	} else {
+		addr := c.a.AddInst("cal")
+
+		if !func_.Used {
+			c.toCompile     = append(c.toCompile, func_)
+			c.deferredCalls = append(c.deferredCalls, Call{Name: name, Addr: addr})
+		} else {
+			c.a.GetInstAt(addr).Data = func_.Addr
+		}
+	}
+}
+
+func (c *Compiler) compileId(n *node.Id) {
+	if macro, ok := c.macros[n.Value]; ok {
+		if !macro.Used {
+			macro.Used = true
+			c.macros[n.Value] = macro
 		}
 
-		return
+		c.compileExpr(macro.Expr)
+	} else if var_, ok := c.vars[n.Value]; ok {
+		if !var_.Used {
+			var_.Used = true
+			c.vars[n.Value] = var_
+		}
+
+		c.compileReadVar(n.Value)
+	}
+}
+
+func (c *Compiler) compileReadVar(name string) {
+	c.a.AddInstWith("psh", c.vars[name].Addr)
+	c.a.AddInst(    "r64")
+}
+
+func (c *Compiler) compileWriteVar(name string) {
+	c.a.AddInstWith("psh", c.vars[name].Addr)
+	c.a.AddInstWith("swp", 0)
+	c.a.AddInst(    "w64")
+}
+
+func (c *Compiler) compileLet(n *node.Let) {
+	panic("TODO: Unimplemented")
+}
+
+// TODO: Return does not work properly with inlined functions
+func (c *Compiler) compileReturn(n *node.Return) {
+	if n.Expr != nil {
+		panic("TODO: Unimplemented")
 	}
 
-	if !func_.compiled || func_.node.Inline {
-		func_.compile(c)
+	c.a.AddInst("ret")
+}
+
+func (c *Compiler) compileIf(n *node.If) {
+	/*
+		if let x = 5; (== x 5) {
+			(println "x is 5")
+		} else {
+			(println "x is not 5")
+		}
+	*/
+
+	if n.Var != nil {
+		c.compileLet(n.Var)                           //     INIT        # let x = 5
 	}
 
-	for _, arg := range f.Args {
-		asm += c.compileExpr(arg)
+	c.compileExpr(n.Cond)                             //     COND        # (== x 5)
+	if !n.Invert {
+		c.a.AddInst("not")                            //     not
+	}
+	                                                  // -------------------- if ... else ...
+	if n.Else != nil {
+		elseAddr := c.a.AddInst("jnz")                //     jnz else
+		c.compileStmts(n.Then)                        //     IF_BODY     # { (println "x is 5") }
+
+		endAddr := c.a.AddInst("jmp")                 //     jmp end
+		c.a.GetInstAt(elseAddr).Data = c.a.Label()    // else:
+		c.compileStmts(n.Else)                        //     ELSE_BODY   # { (println "x is not 5") }
+		c.a.GetInstAt(endAddr).Data = c.a.Label()     // end:
+	} else {                                          // -------------------- if ...
+		endAddr := c.a.AddInst("jnz")                 //     jnz end
+		c.compileStmts(n.Then)                        //     IF_BODY     # { (println "x is 5") }
+		c.a.GetInstAt(endAddr).Data = c.a.Label()     // end:
+	}
+}
+
+func (c *Compiler) startLoop() (isFirst bool) {
+	isFirst = !c.inLoop
+	if isFirst {
+		c.inLoop = true
+	}
+	return
+}
+
+func (c *Compiler) endLoop(isFirst bool, endLabel agen.Word) {
+	if isFirst {
+		c.inLoop = false
 	}
 
-	if func_.node.Inline {
-		asm += func_.asm
+	for _, break_ := range c.breaks {
+		c.a.GetInstAt(break_).Data = endLabel
+	}
+	c.breaks = c.breaks[:0]
+
+	for _, continue_ := range c.continues {
+		c.a.GetInstAt(continue_).Data = endLabel
+	}
+	c.continues = c.continues[:0]
+}
+
+func (c *Compiler) compileWhile(n *node.While) {
+	/*
+		while (< i 10) {
+			(println i)
+			++ i
+		}
+	*/
+
+	isFirst := c.startLoop()
+
+	condLabelAddr := c.a.Label()                  // cond:
+	c.compileExpr(n.Cond)                         //     COND       # (< i 10)
+	if !n.Invert {
+		c.a.AddInst("not")                        //     not
+	}
+
+	endAddr := c.a.AddInst("jnz")                 //     jnz end
+	c.compileStmts(n.Body)                        //     BODY       # { (println i) ++ i }
+	c.a.AddInstWith("jmp", condLabelAddr)         //     jmp cond
+	endLabelAddr := c.a.Label()
+	c.a.GetInstAt(endAddr).Data = endLabelAddr    // end:
+
+	c.endLoop(isFirst, endLabelAddr)
+}
+
+func (c *Compiler) compileFor(n *node.For) {
+	/*
+		for let i = 0; (< i 10); ++ i {
+			(println i)
+		}
+	*/
+
+	isFirst := c.startLoop()
+
+	if n.Var != nil {
+		c.compileStmt(n.Var)                      //     INIT       # let i = 0
+	}
+
+	skipAddr := c.a.AddInst("jmp")                //     jmp skip
+	condLabel := c.a.Label()                      // cond:
+	c.compileStmt(n.Last)                         //     LAST       # ++ i
+	c.a.GetInstAt(skipAddr).Data = c.a.Label()    // skip:
+	c.compileExpr(n.Cond)                         //     COND       # (< i 10)
+	c.a.AddInst("not")                            //     not
+	endAddr := c.a.AddInst("jnz")                 //     jnz end
+	c.compileStmts(n.Body)                        //     BODY       # { (println i) }
+	c.a.AddInstWith("jmp", condLabel)             //     jmp cond
+	endLabelAddr := c.a.Label()
+	c.a.GetInstAt(endAddr).Data = endLabelAddr    // end:
+
+	c.endLoop(isFirst, endLabelAddr)
+}
+
+func (c *Compiler) compileAssign(n *node.Assign) {
+	c.compileExpr(n.Expr)
+	c.compileWriteVar(n.Name.Value)
+}
+
+func (c *Compiler) compileIncrement(n *node.Increment) {
+	c.compileReadVar(n.Name.Value)
+
+	if n.Negative {
+		c.a.AddInst("dec")
 	} else {
-		asm += c.genFuncCall(name)
+		c.a.AddInst("inc")
 	}
 
-	return
+	c.compileWriteVar(n.Name.Value)
 }
 
-func (c *Compiler) compileBreak(b *node.Break) (asm string) {
-	if len(c.ids.currentLoopLabel) == 0 {
-		errors.Error(b.Token.Where, "Unexpected 'break' outside of a loop")
+func (c *Compiler) compileBreak(n *node.Break) {
+	if !c.inLoop {
+		goerror.Error(n.Where, "'break' outside of a loop")
 		return
 	}
 
-	asm += c.genInst("jmp", "%v_end_loop", c.ids.currentLoopLabel)
-
-	return
+	c.breaks = append(c.breaks, c.a.AddInst("jmp"))
 }
 
-func (c *Compiler) compileContinue(b *node.Continue) (asm string) {
-	if len(c.ids.currentLoopLabel) == 0 {
-		errors.Error(b.Token.Where, "Unexpected 'continue' outside of a loop")
+func (c *Compiler) compileContinue(n *node.Continue) {
+	if !c.inLoop {
+		goerror.Error(n.Where, "'continue' outside of a loop")
 		return
 	}
 
-	asm += c.genInst("jmp", "%v_loop", c.ids.currentLoopLabel)
-
-	return
-}
-
-func (c *Compiler) compileReturn(r *node.Return) (asm string) {
-	panic("TODO: Return not implemented yet")
-
-	return
+	c.continues = append(c.continues, c.a.AddInst("jmp"))
 }

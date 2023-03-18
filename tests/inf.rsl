@@ -1,7 +1,7 @@
-fun (main) {
+proc (main) {
 	(using_for)
 }
 
-fun (using_for)   for ;;;     (writef "Im infinite!\n" 1)
-fun (using_while) while true  (writef "Im infinite!\n" 1)
-fun (using_until) until false (writef "Im infinite!\n" 1)
+proc (using_for)   for true;   (writef "Im infinite!\n" 1) {}
+proc (using_while) while true  (writef "Im infinite!\n" 1)
+proc (using_until) until false (writef "Im infinite!\n" 1)

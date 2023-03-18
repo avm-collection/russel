@@ -17,12 +17,12 @@ var Keywords = map[string]token.Type{
 	"++": token.Increment,
 	"--": token.Decrement,
 
-	"name": token.Name,
-	"uses": token.Uses,
+	"module": token.Module,
+	"import": token.Import,
 
-	"mac":    token.Macro,
+	"macro":  token.Macro,
 	"let":    token.Let,
-	"fun":    token.Func,
+	"proc":   token.Proc,
 	"inline": token.Inline,
 
 	"if":     token.If,
@@ -123,8 +123,8 @@ func (l *Lexer) NextToken() (tok token.Token) {
 		case '{': tok = l.lexSimpleSym(token.LCurly)
 		case '}': tok = l.lexSimpleSym(token.RCurly)
 
-		case '[': tok = l.lexSimpleSym(token.LBracket)
-		case ']': tok = l.lexSimpleSym(token.RBracket)
+		case '[': tok = l.lexSimpleSym(token.LSquare)
+		case ']': tok = l.lexSimpleSym(token.RSquare)
 
 		case ':': tok = l.lexSimpleSym(token.Colon)
 		case '.': tok = l.lexSimpleSym(token.Dot)
@@ -365,4 +365,3 @@ func (l *Lexer) getLine() (line string) {
 
 	return
 }
-
