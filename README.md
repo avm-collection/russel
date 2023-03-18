@@ -50,7 +50,7 @@ $ make tests
 - [X] If statements
 - [X] Variables
 - [X] Loops
-- [ ] Compile directly to bytecode
+- [X] Compile directly to bytecode
 - [ ] Type checking
 - [ ] Structures
 - [ ] Modules
