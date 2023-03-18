@@ -37,7 +37,12 @@ $ make install
 $ russel -h
 ```
 
-See [the `./examples` folder](./examples) for example programs
+See [the `./examples` folder](./examples) for example programs. Note that these examples probably
+cant be compiled by the current russel compiler, because its not finished yet. Instead, you can
+compile programs in [the `./tests` folder](./tests) with
+```sh
+$ make tests
+```
 
 ## Milestones
 - [X] Lexer
