@@ -48,7 +48,7 @@ $ make tests
 - [X] Parser
 - [X] Functions
 - [X] If statements
-- [X] Variables
+- [ ] Variables
 - [X] Loops
 - [X] Compile directly to bytecode
 - [ ] Type checking

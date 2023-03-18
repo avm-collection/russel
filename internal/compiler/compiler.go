@@ -187,9 +187,11 @@ func (c *Compiler) registerFunc(n *node.Func) {
 }
 
 func (c *Compiler) registerMacro(n *node.Macro) {
+	panic("TODO: Unimplemented")
 }
 
 func (c *Compiler) registerVar(n *node.Let) {
+	panic("TODO: Unimplemented")
 }
 
 func (c *Compiler) compileFunc(f Func) {
